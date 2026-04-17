@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.log
+.venv/
+venv/
+env/
+
+# Local data files
+*.xlsx
+*.xls
+*.csv
+
+# OS/editor files
+.DS_Store
+Thumbs.db
