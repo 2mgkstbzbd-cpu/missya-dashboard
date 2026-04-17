@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据分析大屏</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/screen.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+</head>
+<body>
+  <div class="bg-layer"></div>
+  <div class="bg-grid"></div>
+
+  <main class="screen-wrap">
+    <header class="top-head">
+      <div class="head-left">
+        <h1>渠道数据分析大屏</h1>
+        <p id="fileMeta">{{ file_name if file_name else "当前未加载文件" }}</p>
+      </div>
+      <div class="head-right">
+        <form id="uploadForm" class="upload-area">
+          <input id="uploadInput" type="file" name="file" accept=".xlsx,.xls,.csv">
+          <button type="submit" id="uploadBtn">上传并刷新</button>
+        </form>
+        <div id="clockNow" class="clock-now"></div>
+      </div>
+    </header>
+
+    <section class="view-tabs panel">
+      <button id="tabOverviewBtn" class="tab-btn active">总览看板</button>
+      <button id="tabOutboundBtn" class="tab-btn">出库分析 - 趋势分析</button>
+      <span id="statusText">等待加载</span>
+    </section>
+
+    <section id="overviewView" class="view-page active">
+      <section class="filter-row panel">
+        <label>省区<select id="provinceFilter"></select></label>
+        <label>经销商<select id="distributorFilter"></select></label>
+        <label>品类<select id="categoryFilter"></select></label>
+        <button id="refreshBtn">更新总览</button>
+      </section>
+
+      <section class="kpi-row">
+        <article class="kpi-card panel"><p>主指标总量</p><h2 id="kpiTotal">0</h2><small id="kpiMom">环比: --</small></article>
+        <article class="kpi-card panel"><p>门店数量</p><h2 id="kpiStore">0</h2><small>门店维度去重</small></article>
+        <article class="kpi-card panel"><p>经销商数量</p><h2 id="kpiDist">0</h2><small>经销商维度去重</small></article>
+        <article class="kpi-card panel"><p>覆盖省区数量</p><h2 id="kpiProv">0</h2><small>省区维度去重</small></article>
+        <article class="kpi-card panel"><p>库存箱数</p><h2 id="kpiStock">0</h2><small id="kpiScan">扫码率: --</small></article>
+      </section>
+
+      <section class="main-grid">
+        <article class="panel chart-panel"><div class="panel-title">月度趋势</div><div id="trendChart" class="chart"></div></article>
+        <article class="panel chart-panel"><div class="panel-title">省区排行</div><div id="provinceChart" class="chart"></div></article>
+        <article class="panel chart-panel"><div class="panel-title">品类占比</div><div id="categoryChart" class="chart"></div></article>
+        <article class="panel chart-panel"><div class="panel-title">经销商排行</div><div id="distChart" class="chart"></div></article>
+        <article class="panel table-panel">
+          <div class="panel-title">经销商榜单</div>
+          <div class="table-wrap">
+            <table id="rankTable">
+              <thead><tr><th>排名</th><th>省区</th><th>经销商</th><th>数值</th></tr></thead>
+              <tbody id="rankTableBody"></tbody>
+              <tfoot id="rankTableFoot"></tfoot>
+            </table>
+          </div>
+        </article>
+      </section>
+    </section>
+
+    <section id="outboundView" class="view-page">
+      <section class="filter-row panel">
+        <label>省区<select id="outProvinceFilter"></select></label>
+        <label>客户简称<select id="outDistributorFilter"></select></label>
+        <label>品类<select id="outCategoryFilter"></select></label>
+        <label>重量<select id="outWeightFilter"></select></label>
+        <label>年份<select id="outYearFilter"></select></label>
+        <label>月份<select id="outMonthFilter"></select></label>
+        <button id="outRefreshBtn">更新趋势分析</button>
+      </section>
+
+      <section class="kpi-row out-kpi-row">
+        <article class="kpi-card panel"><p>筛选后总出库(箱)</p><h2 id="outTotalBoxes">0</h2><small id="outMomRate">环比: --</small></article>
+        <article class="kpi-card panel"><p>选中月份出库(箱)</p><h2 id="outMonthlyBoxes">0</h2><small id="outSelectedMonth">月份: --</small></article>
+        <article class="kpi-card panel"><p>最近日出库(箱)</p><h2 id="outLatestDayBoxes">0</h2><small>本月按日趋势末值</small></article>
+        <article class="kpi-card panel"><p>库存(箱)</p><h2 id="outInventoryBoxes">0</h2><small id="outQ1AvgBoxes">1-3月均出库: --</small></article>
+        <article class="kpi-card panel"><p>可销月(存销比)</p><h2 id="outSellableMonths">0</h2><small>库存 / 1-3月均出库</small></article>
+        <article class="kpi-card panel"><p>新客(本月)</p><h2 id="outCurrentNewCustomers">0</h2><small id="outCumulativeNewCustomers">累计: 0</small></article>
+      </section>
+
+      <section class="out-grid compact">
+        <article class="panel chart-panel">
+          <div class="panel-title">多月出库趋势</div>
+          <div id="outMonthlyTrendChart" class="chart"></div>
+        </article>
+        <article class="panel chart-panel">
+          <div class="panel-title">本月按日趋势</div>
+          <div id="outDailyTrendChart" class="chart"></div>
+        </article>
+        <article class="panel chart-panel">
+          <div class="panel-title">新客分月趋势</div>
+          <div id="outNewcustTrendChart" class="chart"></div>
+        </article>
+      </section>
+
+      <section class="panel detail-panel">
+        <div class="drill-toolbar">
+          <div class="panel-title" id="outDrillTitle">下钻明细</div>
+          <button id="outDrillBackBtn" class="tab-btn">返回上一级</button>
+        </div>
+        <div class="table-wrap">
+          <table id="outDetailTable">
+            <thead id="outDetailHead"></thead>
+            <tbody id="outDetailBody"></tbody>
+            <tfoot id="outDetailFoot"></tfoot>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    window.__PAGE_BOOTSTRAP__ = {
+      loaded: {{ "true" if loaded else "false" }}
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/screen.js') }}"></script>
+</body>
+</html>
